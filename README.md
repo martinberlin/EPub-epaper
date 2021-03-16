@@ -1,4 +1,4 @@
-# EPub-InkPlate An EPub Reader for the ESP32 epaper devices
+# An EPub Reader for the ESP32 epaper devices
 
 Using [EPub-Inkplate project from Turgu1](https://github.com/turgu1/EPub-InkPlate) as a base. Please refer to his Repository readme to see the latest news.
 
