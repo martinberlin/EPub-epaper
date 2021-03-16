@@ -7,7 +7,7 @@ Using [EPub-Inkplate project from Turgu1](https://github.com/turgu1/EPub-InkPlat
 - [ ] Refactor the epaper output code to make it multi-epaper display
 - [ ] First display supported to be [LILYGO parallel eink ED047TC1](https://github.com/martinberlin/cale-idf/wiki/Model-parallel-ED047TC1.h)
 - [ ] Support for 4-button actions
-- [ ] Support for Tocuh (L58 IC)
+- [ ] Support for Touch (L58 IC)
 
 Some pictures from the InkPlate-6 version:
 
