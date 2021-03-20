@@ -238,43 +238,7 @@
 
 #endif
 
-#if EPUB_LINUX_BUILD
 
-  #include <gtk/gtk.h>
-
-  #include "screen.hpp"
-
-  void EventMgr::left()   { app_controller.key_event(KeyEvent::PREV);       app_controller.launch(); }
-  void EventMgr::right()  { app_controller.key_event(KeyEvent::NEXT);       app_controller.launch(); }
-  void EventMgr::up()     { app_controller.key_event(KeyEvent::DBL_PREV);   app_controller.launch(); }
-  void EventMgr::down()   { app_controller.key_event(KeyEvent::DBL_NEXT);   app_controller.launch(); }
-  void EventMgr::select() { app_controller.key_event(KeyEvent::SELECT);     app_controller.launch(); }
-  void EventMgr::home()   { app_controller.key_event(KeyEvent::DBL_SELECT); app_controller.launch(); }
-
-  #define BUTTON_EVENT(button, msg) \
-    static void button##_clicked(GObject * button, GParamSpec * property, gpointer data) { \
-      event_mgr.button(); \
-    }
-
-  BUTTON_EVENT(left,   "Left Clicked"  )
-  BUTTON_EVENT(right,  "Right Clicked" )
-  BUTTON_EVENT(up,     "Up Clicked"    )
-  BUTTON_EVENT(down,   "Down Clicked"  )
-  BUTTON_EVENT(select, "Select Clicked")
-  BUTTON_EVENT(home,   "Home Clicked"  )
-
-  void EventMgr::loop()
-  {
-    gtk_main(); // never return
-  }
-
-void
-EventMgr::set_orientation(Screen::Orientation orient)
-{
-  // Nothing to do...
-}
-
-#else
   void EventMgr::loop()
   {
     while (1) {
@@ -317,49 +281,35 @@ EventMgr::set_orientation(Screen::Orientation orient)
       }
     }
   }
-#endif
 
-bool
-EventMgr::setup()
+bool EventMgr::setup()
 {
-  #if EPUB_LINUX_BUILD
-    g_signal_connect(G_OBJECT(  screen.left_button), "clicked", G_CALLBACK(  left_clicked), (gpointer) screen.window);
-    g_signal_connect(G_OBJECT( screen.right_button), "clicked", G_CALLBACK( right_clicked), (gpointer) screen.window);
-    g_signal_connect(G_OBJECT(    screen.up_button), "clicked", G_CALLBACK(    up_clicked), (gpointer) screen.window);
-    g_signal_connect(G_OBJECT(  screen.down_button), "clicked", G_CALLBACK(  down_clicked), (gpointer) screen.window);
-    g_signal_connect(G_OBJECT(screen.select_button), "clicked", G_CALLBACK(select_clicked), (gpointer) screen.window);
-    g_signal_connect(G_OBJECT(  screen.home_button), "clicked", G_CALLBACK(  home_clicked), (gpointer) screen.window);
+  gpio_config_t io_conf;
 
-  #else
+  io_conf.intr_type    = GPIO_INTR_POSEDGE;   // Interrupt of rising edge
+  io_conf.pin_bit_mask = 1ULL << GPIO_NUM_34; // Bit mask of the pin, use GPIO34 here
+  io_conf.mode         = GPIO_MODE_INPUT;     // Set as input mode
+  io_conf.pull_up_en   = GPIO_PULLUP_ENABLE;  // Enable pull-up mode
 
-    gpio_config_t io_conf;
+  gpio_config(&io_conf);
+  
+  touchpad_evt_queue = xQueueCreate(          //create a queue to handle gpio event from isr
+    10, sizeof(uint32_t));
+  touchpad_key_queue = xQueueCreate(          //create a queue to handle key event from task
+    10, sizeof(EventMgr::KeyEvent));
 
-    io_conf.intr_type    = GPIO_INTR_POSEDGE;   // Interrupt of rising edge
-    io_conf.pin_bit_mask = 1ULL << GPIO_NUM_34; // Bit mask of the pin, use GPIO34 here
-    io_conf.mode         = GPIO_MODE_INPUT;     // Set as input mode
-    io_conf.pull_up_en   = GPIO_PULLUP_ENABLE;  // Enable pull-up mode
+  TaskHandle_t xHandle = NULL;
+  xTaskCreate(get_key_task, "GetKey", 2000, nullptr, 10, &xHandle);
 
-    gpio_config(&io_conf);
-    
-    touchpad_evt_queue = xQueueCreate(          //create a queue to handle gpio event from isr
-      10, sizeof(uint32_t));
-    touchpad_key_queue = xQueueCreate(          //create a queue to handle key event from task
-      10, sizeof(EventMgr::KeyEvent));
+  gpio_install_isr_service(0);                //install gpio isr service
+  
+  gpio_isr_handler_add(                       //hook isr handler for specific gpio pin
+    GPIO_NUM_34, 
+    touchpad_isr_handler, 
+    (void *) GPIO_NUM_34);
 
-    TaskHandle_t xHandle = NULL;
-    xTaskCreate(get_key_task, "GetKey", 2000, nullptr, 10, &xHandle);
-
-    gpio_install_isr_service(0);                //install gpio isr service
-    
-    gpio_isr_handler_add(                       //hook isr handler for specific gpio pin
-      GPIO_NUM_34, 
-      touchpad_isr_handler, 
-      (void *) GPIO_NUM_34);
-
-    Wire::enter();
-    mcp_int.get_int_state();                        // This is activating interrupts...
-    Wire::leave();
-  #endif
-
+  Wire::enter();
+  mcp_int.get_int_state();                        // This is activating interrupts...
+  Wire::leave();
   return true;
 }

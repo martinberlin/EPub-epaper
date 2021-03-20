@@ -5,8 +5,6 @@
 #define __GLOBAL__ 1
 #include "global.hpp"
 
-#if EPUB_INKPLATE_BUILD
-
   // InkPlate6 main function and main task
   
   #include "freertos/FreeRTOS.h"
@@ -142,66 +140,3 @@
     }
 
   } // extern "C"
-
-#else
-
-  // Linux main function
-
-  #include "controllers/books_dir_controller.hpp"
-  #include "controllers/app_controller.hpp"
-  #include "viewers/msg_viewer.hpp"
-  #include "models/fonts.hpp"
-  #include "models/config.hpp"
-  #include "models/page_locs.hpp"
-  #include "screen.hpp"
-
-  static const char * TAG = "Main";
-
-  int 
-  main(int argc, char **argv) 
-  {
-    bool config_err = !config.read();
-    if (config_err) LOG_E("Config Error.");
-
-    #if DEBUGGING
-      config.show();
-    #endif
-
-    page_locs.setup();
-    
-    if (fonts.setup()) {
-
-      Screen::Orientation    orientation;
-      Screen::PixelResolution resolution;
-      config.get(Config::Ident::ORIENTATION,     (int8_t *) &orientation);
-      config.get(Config::Ident::PIXEL_RESOLUTION, (int8_t *) &resolution);
-      screen.setup(resolution, orientation);
-
-      event_mgr.setup();
-      books_dir_controller.setup();
-
-      if (config_err) {
-        msg_viewer.show(MsgViewer::ALERT, false, true, "Configuration Problem!",
-          "Unable to read/save configuration file. Entering Deep Sleep. Press a key to restart."
-        );
-        sleep(10);
-        exit(0);
-      }
-
-      // exit(0)  // Used for some Valgrind tests
-      app_controller.start();
-    }
-    else {
-      msg_viewer.show(MsgViewer::ALERT, false, true, "Font Loading Problem!",
-        "Unable to load default fonts."
-      );
-
-      sleep(30);
-      return 1;
-
-    }
-    
-    return 0;
-  }
-
-#endif
