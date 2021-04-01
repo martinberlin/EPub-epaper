@@ -254,7 +254,8 @@ TTF::set_font_face_from_file(const std::string font_filename)
   LOG_D("set_font_face_from_file() ...");
 
   FILE * font_file;
-  if ((font_file = fopen(font_filename.c_str(), "r")) == nullptr) {
+  //font_filename.c_str()
+  if ((font_file = fopen("/fonts/drawings.otf", "r")) == nullptr) {
     LOG_E("set_font_face_from_file: Unable to open font file '%s'", font_filename.c_str());
     return false;
   }
