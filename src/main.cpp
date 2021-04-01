@@ -75,16 +75,16 @@ uint8_t *framebuffer;
 
     page_locs.setup();
 
-    /* if (fonts.setup()) {
+    if (fonts.setup()) {
       
-      Screen::Orientation    orientation;
+      /* Screen::Orientation    orientation;
       Screen::PixelResolution resolution;
       config.get(Config::Ident::ORIENTATION,      (int8_t *) &orientation);
       config.get(Config::Ident::PIXEL_RESOLUTION, (int8_t *) &resolution);
-      screen.setup(resolution, orientation);
+      screen.setup(resolution, orientation); */
 
       event_mgr.setup();
-      event_mgr.set_orientation(orientation);
+      event_mgr.set_orientation(Screen::Orientation::LEFT);
 
       if (nvs_err != ESP_OK) {
         msg_viewer.show(MsgViewer::ALERT, false, true, "Hardware Problem!",
@@ -96,34 +96,34 @@ uint8_t *framebuffer;
         inkplate_platform.deep_sleep();
       }
   
-      if (inkplate_err) {
+      /* if (inkplate_err) {
         msg_viewer.show(MsgViewer::ALERT, false, true, "Hardware Problem!",
           "Unable to initialize the InkPlate drivers. Entering Deep Sleep. Press a key to restart."
         );
         ESP::delay(500);
         inkplate_platform.deep_sleep();
-      }
+      } */
 
       if (config_err) {
         msg_viewer.show(MsgViewer::ALERT, false, true, "Configuration Problem!",
           "Unable to read/save configuration file. Entering Deep Sleep. Press a key to restart."
         );
         ESP::delay(500);
-        inkplate_platform.deep_sleep();
+        epd_poweroff();
       }
 
       books_dir_controller.setup();
       LOG_D("Initialization completed");
       app_controller.start();
     }
-    else {
+    /* else {
       LOG_E("Font loading error.");
       msg_viewer.show(MsgViewer::ALERT, false, true, "Font Loading Problem!",
         "Unable to read required fonts. Entering Deep Sleep. Press a key to restart."
       );
       ESP::delay(500);
       inkplate_platform.deep_sleep();
-    } */
+    }  */
 
     #if DEBUGGING
       while (1) {
@@ -141,8 +141,8 @@ uint8_t *framebuffer;
     app_main(void)
     {
       epd_init(EPD_OPTIONS_DEFAULT);
-      framebuffer = epd_init_hl(EPD_BUILTIN_WAVEFORM);
-       
+      epd_set_rotation(1);
+      framebuffer = epd_init_hl(EPD_BUILTIN_WAVEFORM);     
 
       TaskHandle_t xHandle = NULL;
       xTaskCreate(mainTask, "mainTask", STACK_SIZE, (void *) 1, configMAX_PRIORITIES - 1, &xHandle);
