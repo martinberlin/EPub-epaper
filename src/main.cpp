@@ -4,28 +4,34 @@
 
 #define __GLOBAL__ 1
 #include "global.hpp"
-
-  // InkPlate6 main function and main task
   
-  #include "freertos/FreeRTOS.h"
-  #include "freertos/task.h"
-  #include "logging.hpp"
+#include "esp_heap_caps.h"
+#include "esp_log.h"
+#include "esp_timer.h"
+#include "esp_types.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "logging.hpp"
 
-  #include "controllers/books_dir_controller.hpp"
-  #include "controllers/app_controller.hpp"
-  #include "models/fonts.hpp"
-  #include "models/epub.hpp"
-  #include "models/config.hpp"
-  #include "screen.hpp"
-  #include "inkplate_platform.hpp"
-  #include "helpers/unzip.hpp"
-  #include "viewers/msg_viewer.hpp"
-  #include "pugixml.hpp"
-  #include "nvs_flash.h"
-  #include "alloc.hpp"
-  #include "esp.hpp"
+#include "controllers/books_dir_controller.hpp"
+#include "controllers/app_controller.hpp"
+#include "models/fonts.hpp"
+#include "models/epub.hpp"
+#include "models/config.hpp"
+//#include "screen.hpp" // Will be replaced by EPDiy
+//#include "inkplate_platform.hpp"
+#include "helpers/unzip.hpp"
+#include "viewers/msg_viewer.hpp"
+#include "pugixml.hpp"
+#include "nvs_flash.h"
+#include "alloc.hpp"
+#include "esp.hpp"
 
-  #include <stdio.h>
+//EPDiy
+#include "epd_driver.h"
+uint8_t *framebuffer;
+
+#include <stdio.h>
 
   static constexpr char const * TAG = "main";
 
@@ -52,13 +58,14 @@
         vTaskDelay(1000 / portTICK_PERIOD_MS);
       }
       printf("\n"); fflush(stdout);
-    #endif
+    #endif 
 
-    bool inkplate_err = !inkplate_platform.setup();
-    if (inkplate_err) LOG_E("InkPlate6Ctrl Error.");
+  // TEST clear epaper
+  epd_poweron();
+  epd_clear();
 
-    bool config_err = !config.read();
-    if (config_err) LOG_E("Config Error.");
+  bool config_err = !config.read();
+  if (config_err) LOG_E("Config Error.");
 
     #if DEBUGGING
       config.show();
@@ -68,7 +75,7 @@
 
     page_locs.setup();
 
-    if (fonts.setup()) {
+    /* if (fonts.setup()) {
       
       Screen::Orientation    orientation;
       Screen::PixelResolution resolution;
@@ -116,11 +123,11 @@
       );
       ESP::delay(500);
       inkplate_platform.deep_sleep();
-    }
+    } */
 
     #if DEBUGGING
       while (1) {
-        printf("Allo!\n");
+        printf(". ");
         vTaskDelay(10000 / portTICK_PERIOD_MS);
       }
     #endif
@@ -133,8 +140,11 @@
     void 
     app_main(void)
     {
-      TaskHandle_t xHandle = NULL;
+      epd_init(EPD_OPTIONS_DEFAULT);
+      framebuffer = epd_init_hl(EPD_BUILTIN_WAVEFORM);
+       
 
+      TaskHandle_t xHandle = NULL;
       xTaskCreate(mainTask, "mainTask", STACK_SIZE, (void *) 1, configMAX_PRIORITIES - 1, &xHandle);
       configASSERT(xHandle);
     }
